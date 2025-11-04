@@ -6,11 +6,13 @@ from soe_vinorm.normalizer import SoeNormalizer, batch_normalize_texts, normaliz
 class TestSoeNormalizer:
     """Test cases for SoeNormalizer class."""
 
-    def test_init_with_custom_dicts(self, vn_dict, abbr_dict):
+    def test_init_with_custom_dicts(self, vn_dict, abbr_dict, expand_hotfix_dict, expand_hotfix_multi_word_dict):
         """Test normalizer initialization with custom dictionaries."""
-        normalizer = SoeNormalizer(vn_dict=vn_dict, abbr_dict=abbr_dict)
+        normalizer = SoeNormalizer(vn_dict=vn_dict, abbr_dict=abbr_dict, expand_hotfix_dict=expand_hotfix_dict, expand_hotfix_multi_word_dict=expand_hotfix_multi_word_dict)
         assert normalizer._vn_dict == vn_dict
         assert normalizer._abbr_dict == abbr_dict
+        assert normalizer._expand_hotfix_dict == expand_hotfix_dict
+        assert normalizer._expand_hotfix_multi_word_dict == expand_hotfix_multi_word_dict
 
     def test_init_with_default_dicts(self):
         """Test normalizer initialization with default dictionaries."""
@@ -78,6 +80,20 @@ class TestNormalizeTextFunction:
         text = "anh có 123 đồng"
         result = normalize_text(text, vn_dict=vn_dict, abbr_dict=abbr_dict)
         assert isinstance(result, str)
+
+    def test_normalize_company_name(self, vn_dict, abbr_dict, expand_hotfix_dict, expand_hotfix_multi_word_dict):
+        """Test normalize_text function with company name."""
+        text = "Ứng dụng AI HAY"
+        result = normalize_text(text, vn_dict=vn_dict, abbr_dict=abbr_dict, expand_hotfix_dict=expand_hotfix_dict, expand_hotfix_multi_word_dict=expand_hotfix_multi_word_dict)
+        assert isinstance(result, str)
+        assert result == "Ứng dụng ây ai hay"
+
+    def test_normalize_text_with_english_name(self, vn_dict, abbr_dict, expand_hotfix_dict, expand_hotfix_multi_word_dict):
+        """Test normalize_text function with English name."""
+        text = "Ông Trump đã đến Việt Nam"
+        result = normalize_text(text, vn_dict=vn_dict, abbr_dict=abbr_dict, expand_hotfix_dict=expand_hotfix_dict, expand_hotfix_multi_word_dict=expand_hotfix_multi_word_dict)
+        assert isinstance(result, str)
+        assert result == "Ông Trăm đã đến Việt Nam"
 
     def test_normalize_text_with_defaults(self):
         """Test normalize_text function with default dictionaries."""

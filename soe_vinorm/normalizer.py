@@ -6,8 +6,8 @@ from tqdm import tqdm
 
 from soe_vinorm.nsw_detector import CRFNSWDetector
 from soe_vinorm.nsw_expander import RuleBasedNSWExpander
-from soe_vinorm.text_processor import TextPreprocessor
-from soe_vinorm.utils import load_abbreviation_dict, load_vietnamese_syllables
+from soe_vinorm.text_processor import TextPreprocessor, ReplaceExpandHotfixMultiWord
+from soe_vinorm.utils import load_abbreviation_dict, load_vietnamese_syllables, load_expand_hotfix_dict, load_expand_hotfix_multi_word_dict
 
 
 class Normalizer(ABC):
@@ -49,11 +49,13 @@ class Normalizer(ABC):
 def _worker_initializer(
     vn_dict: Union[List[str], None] = None,
     abbr_dict: Union[Dict[str, List[str]], None] = None,
+    expand_hotfix_dict: Union[Dict[str, str], None] = None,
+    expand_hotfix_multi_word_dict: Union[Dict[str, str], None] = None,
     kwargs: Dict[str, Any] = {},
 ):
     """Initialize worker instance."""
     global worker_normalizer
-    worker_normalizer = SoeNormalizer(vn_dict=vn_dict, abbr_dict=abbr_dict, **kwargs)
+    worker_normalizer = SoeNormalizer(vn_dict=vn_dict, abbr_dict=abbr_dict, expand_hotfix_dict=expand_hotfix_dict, expand_hotfix_multi_word_dict=expand_hotfix_multi_word_dict, **kwargs)
 
 
 def _worker_normalize(text: str) -> str:
@@ -71,6 +73,8 @@ class SoeNormalizer(Normalizer):
         self,
         vn_dict: Union[List[str], None] = None,
         abbr_dict: Union[Dict[str, List[str]], None] = None,
+        expand_hotfix_dict: Union[Dict[str, str], None] = None,
+        expand_hotfix_multi_word_dict: Union[Dict[str, str], None] = None,
         **kwargs,
     ):
         """
@@ -79,12 +83,17 @@ class SoeNormalizer(Normalizer):
         Args:
             vn_dict: List of Vietnamese words for dictionary lookup. If None, use default Vietnamese dictionary.
             abbr_dict: Dictionary of abbreviations and their expansions. If None, use default abbreviation dictionary.
+            expand_hotfix_dict: Dictionary of hotfix expansions for single words. If None, use default hotfix dictionary.
+            expand_hotfix_multi_word_dict: Dictionary of hotfix expansions for multi-word expressions. If None, use default multi-word hotfix dictionary.
         """
         self._vn_dict = vn_dict or load_vietnamese_syllables()
         self._abbr_dict = abbr_dict or load_abbreviation_dict()
+        self._expand_hotfix_dict = expand_hotfix_dict or load_expand_hotfix_dict()
+        self._expand_hotfix_multi_word_dict = expand_hotfix_multi_word_dict or load_expand_hotfix_multi_word_dict()
         self._kwargs = kwargs
 
         self._preprocessor = TextPreprocessor(self._vn_dict, **kwargs)
+        self._replace_expand_hotfix_multi_word = ReplaceExpandHotfixMultiWord(self._expand_hotfix_multi_word_dict)
         self._nsw_detector = CRFNSWDetector(
             vn_dict=self._vn_dict,
             abbr_dict=self._abbr_dict,
@@ -109,10 +118,25 @@ class SoeNormalizer(Normalizer):
         if not isinstance(text, str):
             raise TypeError("Input must be a string")
 
-        tokens = self._preprocessor(text).split()
-
+        tokens = self._preprocessor(text) # .split()
+        # print(f"DEBUG preprocessed tokens: {tokens}")
+        # print(f"DEBUG tokens: {tokens}")
+        # print(f"Info: {self._expand_hotfix_dict}")
+        # add hotfix replacements before NSW detection
+        # replace multi-word first
+        # for phrase, expansion in self._expand_hotfix_multi_word_dict.items():
+        #     if phrase in tokens:
+        #         tokens = tokens.replace(phrase, expansion)
+        tokens = self._replace_expand_hotfix_multi_word(tokens)
+        # then single-word
+        tokens = tokens.split()
+        for token_idx, token in enumerate(tokens):
+            if token in self._expand_hotfix_dict:
+                tokens[token_idx] = self._expand_hotfix_dict[token]
         if not tokens:
             return text.strip()
+        
+
 
         nsw_tags = self._nsw_detector.detect(tokens)
         expanded_tokens = self._nsw_expander.expand(tokens, nsw_tags)
@@ -155,7 +179,7 @@ class SoeNormalizer(Normalizer):
         with ProcessPoolExecutor(
             max_workers=n_jobs,
             initializer=_worker_initializer,
-            initargs=(self._vn_dict, self._abbr_dict, self._kwargs),
+            initargs=(self._vn_dict, self._abbr_dict, self._expand_hotfix_dict, self._expand_hotfix_multi_word_dict, self._kwargs),
         ) as executor:
             return list(
                 tqdm(
@@ -171,6 +195,8 @@ def normalize_text(
     text: str,
     vn_dict: Union[List[str], None] = None,
     abbr_dict: Union[Dict[str, List[str]], None] = None,
+    expand_hotfix_dict: Union[Dict[str, str], None] = None,
+    expand_hotfix_multi_word_dict: Union[Dict[str, str], None] = None,
     **kwargs,
 ) -> str:
     """
@@ -187,6 +213,8 @@ def normalize_text(
     normalizer = SoeNormalizer(
         vn_dict=vn_dict,
         abbr_dict=abbr_dict,
+        expand_hotfix_dict=expand_hotfix_dict,
+        expand_hotfix_multi_word_dict=expand_hotfix_multi_word_dict,
         **kwargs,
     )
     return normalizer.normalize(text)
@@ -196,6 +224,8 @@ def batch_normalize_texts(
     texts: List[str],
     vn_dict: Union[List[str], None] = None,
     abbr_dict: Union[Dict[str, List[str]], None] = None,
+    expand_hotfix_dict: Union[Dict[str, str], None] = None,
+    expand_hotfix_multi_word_dict: Union[Dict[str, str], None] = None,
     n_jobs: int = 1,
     show_progress: bool = False,
     **kwargs,
@@ -216,6 +246,8 @@ def batch_normalize_texts(
     normalizer = SoeNormalizer(
         vn_dict=vn_dict,
         abbr_dict=abbr_dict,
+        expand_hotfix_dict=expand_hotfix_dict,
+        expand_hotfix_multi_word_dict=expand_hotfix_multi_word_dict,
         **kwargs,
     )
     return normalizer.batch_normalize(texts, n_jobs=n_jobs, show_progress=show_progress)

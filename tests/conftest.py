@@ -5,14 +5,24 @@ import pytest
 
 @pytest.fixture
 def vn_dict() -> List[str]:
-    return ['anh', 'rất', 'ngại']
+    return ['anh', 'rất', 'ngại', 'hay']
 
 
 @pytest.fixture
 def abbr_dict() -> Dict[str, List[str]]:
     return {'ATTT': ['An toàn thông tin'], 'ĐT': ['Đội tuyển', 'Đào tạo', 'Điện thoại']}
 
+@pytest.fixture
+def expand_hotfix_dict() -> Dict[str, str]:
+    return {
+        'Trump': 'Trăm',
+    }
 
+@pytest.fixture
+def expand_hotfix_multi_word_dict() -> Dict[str, str]:
+    return {
+        'AI HAY': 'ây ai hay',
+    }
 
 @pytest.fixture
 def normalize_examples() -> List[str]:

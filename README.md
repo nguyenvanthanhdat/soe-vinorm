@@ -29,6 +29,12 @@ pip install soe-vinorm
 uv pip install git+https://github.com/vinhdq842/soe-vinorm.git
 ```
 
+### Option 4: For this this custom version
+```bash
+# Install directly from custom GitHub repo
+pip install git+https://github.com/nguyenvanthanhdat/soe-vinorm.git
+```
+
 ## Usage
 
 ### Command Line Interface
@@ -179,6 +185,9 @@ normalizer = SoeNormalizer(model_path="model-repo")
 - The normalized results are then inserted back into the original sentence, resulting in the desired normalized sentence.
 
 ### Other details
+- Add custom if else words for hotfixes.
+  - Single-word hotfixes are one word mappings (e.g., "COVID" -> "Cô Vít")
+  - Multi-word hotfixes are mappings for phrases using aho-corasick algorithm.
 - Foreign NSWs are currently kept as-is.
 - Abbreviation expansion model
   - **v0.1**: Quantized PhoBERT model combined with a Vietnamese abbreviation dictionary.

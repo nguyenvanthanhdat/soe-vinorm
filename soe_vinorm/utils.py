@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List
-
+import ahocorasick
 from huggingface_hub import snapshot_download
 
 
@@ -35,7 +35,7 @@ def load_abbreviation_dict() -> Dict[str, List[str]]:
 
     if not file_path.exists():
         raise FileNotFoundError(f"Abbreviation dictionary file not found: {file_path}")
-
+    A = ahocorasick.Automaton()
     abbreviations = {}
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -48,6 +48,54 @@ def load_abbreviation_dict() -> Dict[str, List[str]]:
 
     return abbreviations
 
+@lru_cache(maxsize=1)
+def load_expand_hotfix_dict() -> Dict[str, str]:
+    file_path = get_data_path() / "dictionaries" / "expand_hotfix.txt"
+    if not file_path.exists():
+        return {}
+
+    hotfix_map = {}
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or ":" not in line:
+                continue
+            phrase, expansion = line.split(":", 1)
+            phrase = phrase.strip()
+            expansion = expansion.strip()
+            if phrase and expansion:
+                hotfix_map[phrase] = expansion
+    return hotfix_map
+
+@lru_cache(maxsize=1)
+def load_expand_hotfix_multi_word_dict() -> Dict[str, str]:
+    file_path = get_data_path() / "dictionaries" / "expand_hotfix_multi_word.txt"
+    if not file_path.exists():
+        return {}
+    # A = ahocorasick.Automaton()
+    # with open(file_path, "r", encoding="utf-8") as f:
+    #     for line in f:
+    #         line = line.strip()
+    #         if not line or line.startswith("#") or ":" not in line:
+    #             continue
+    #         phrase, expansion = line.split(":", 1)
+    #         phrase = phrase.strip()
+    #         expansion = expansion.strip()
+    #         A.add_word(phrase, expansion)
+    # A.make_automaton()
+    # return A
+    hotfix_map = {}
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or ":" not in line:
+                continue
+            phrase, expansion = line.split(":", 1)
+            phrase = phrase.strip()
+            expansion = expansion.strip()
+            if phrase and expansion:
+                hotfix_map[phrase] = expansion
+    return hotfix_map
 
 HF_MODEL_REPO_ID = "vinhdq842/soe-vinorm"
 HF_MODEL_REPO_REVISION = "cb9705b"

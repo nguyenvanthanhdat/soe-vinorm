@@ -1,11 +1,13 @@
 import re
 import unicodedata
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 
 import unidecode
 
 from soe_vinorm.utils import load_vietnamese_syllables
+
+from ahocorasick import Automaton
 
 
 class TextProcessor(ABC):
@@ -16,6 +18,41 @@ class TextProcessor(ABC):
     @abstractmethod
     def __call__(self, text: str) -> str: ...
 
+class ReplaceExpandHotfixMultiWord:
+    """
+    Replace phrases in the text based on an expansion dictionary for multi-word expressions use aho-corasick automaton.
+    """
+
+    def __init__(self, expand_hotfix_multi_word_dict: Union[Dict[str, str], None]):
+        # self._automaton = expand_hotfix_multi_word_dict
+        self._automaton = Automaton()
+        for phrase, expansion in (expand_hotfix_multi_word_dict or {}).items():
+            self._automaton.add_word(phrase, (phrase, expansion))
+        self._automaton.make_automaton()
+
+    def __call__(self, text: str) -> str:
+        """Process the input text."""
+        if not isinstance(text, str):
+            raise TypeError("text must be a string")
+
+        result = []
+        last_index = 0
+
+        for end_index, (phrase, expansion) in self._automaton.iter(text):
+            start_index = end_index - len(phrase) + 1
+
+            if start_index < last_index:
+                continue
+
+            if start_index > last_index:
+                result.append(text[last_index:start_index])
+            result.append(expansion)
+            last_index = end_index + 1
+
+        if last_index < len(text):
+            result.append(text[last_index:])
+
+        return "".join(result)
 
 class TextPreprocessor(TextProcessor):
     """
