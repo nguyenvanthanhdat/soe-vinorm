@@ -3,6 +3,9 @@ from concurrent.futures import ProcessPoolExecutor
 from typing import Any, Dict, List, Union
 
 from tqdm import tqdm
+from bs4 import BeautifulSoup
+from markdown import markdown
+import re
 
 from soe_vinorm.nsw_detector import CRFNSWDetector
 from soe_vinorm.nsw_expander import RuleBasedNSWExpander
@@ -104,6 +107,14 @@ class SoeNormalizer(Normalizer):
             abbr_dict=self._abbr_dict,
             **kwargs,
         )
+
+    def preprocess(self, text: str) -> str:
+        pattern = r'\s*\[citation:\d+\]'
+        text = markdown(text)
+        text = ''.join(BeautifulSoup(text).find_all(string=True))
+        text =  text.replace('\n', ' ').replace('  ', ' ')
+        text = re.sub(pattern, '', text)
+        return text
 
     def normalize(self, text: str) -> str:
         """
