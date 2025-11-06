@@ -129,6 +129,7 @@ class SoeNormalizer(Normalizer):
         if not isinstance(text, str):
             raise TypeError("Input must be a string")
 
+        text = self.preprocess(text)
         tokens = self._preprocessor(text) # .split()
         # print(f"DEBUG preprocessed tokens: {tokens}")
         # print(f"DEBUG tokens: {tokens}")
