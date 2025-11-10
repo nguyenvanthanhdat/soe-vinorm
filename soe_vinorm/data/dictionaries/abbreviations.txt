@@ -1726,8 +1726,6 @@ VKSND:Viện Kiểm sát Nhân dân
 vksnd:Viện Kiểm sát Nhân dân
 VKSNDTC:Viện Kiểm sát Nhân dân Tối cao
 vksndtc:Viện Kiểm sát Nhân dân Tối cao
-VL:Vật lý
-vl:Vật lý
 VLTK:Võ Lâm Truyền Kỳ
 vltk:Võ Lâm Truyền Kỳ
 VLXD:Vật liệu xây dựng
