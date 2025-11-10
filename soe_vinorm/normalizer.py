@@ -112,7 +112,10 @@ class SoeNormalizer(Normalizer):
         pattern = r'\s*\[citation:\d+\]'
         text = markdown(text)
         text = ''.join(BeautifulSoup(text).find_all(string=True))
-        text =  text.replace('\n', ' ').replace('  ', ' ')
+        text = re.sub(r'\n+', '\n', text)
+        text = text.replace('\n', '.')
+        text = re.sub(r"\s+", " ", text)
+        text = re.sub(r'\s*\.\s*', '. ', text).strip()
         text = re.sub(pattern, '', text)
         return text
 
