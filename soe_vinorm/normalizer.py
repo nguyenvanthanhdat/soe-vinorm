@@ -6,6 +6,7 @@ from tqdm import tqdm
 from bs4 import BeautifulSoup
 from markdown import markdown
 import re
+import os
 
 from soe_vinorm.nsw_detector import CRFNSWDetector
 from soe_vinorm.nsw_expander import RuleBasedNSWExpander
@@ -109,14 +110,44 @@ class SoeNormalizer(Normalizer):
         )
 
     def preprocess(self, text: str) -> str:
-        pattern = r'\s*\[citation:\d+\]'
+        # remove citations and markdown formatting
+        text = re.sub(r'\s*\[citation:\d+\]', '', text)
+        text = re.sub(r'(?m)^(\s*)(\d+)\.\s+', r'\1\2\. ', text)
+
+        # convert markdown to plain text
         text = markdown(text)
-        text = ''.join(BeautifulSoup(text).find_all(string=True))
-        text = re.sub(r'\n+', '\n', text)
-        text = text.replace('\n', '.')
+        soup = BeautifulSoup(text, "html.parser")
+        text = soup.get_text(separator="\n")
+
+        # concatenate multiple newlines
+        text = re.sub(r'\n+', '\n', text).strip()
+
+        # convert 1. -> 1, 2. -> 2, at the beginning of lines
+        text = re.sub(r'(?m)^\s*(\d{1,3})\.\s+', r'\1, ', text)
+
+        # Replace \n to "." for add [pause] time
+        text = text.replace('\n', '. ')
+
+        # normalize spaces around punctuation
         text = re.sub(r"\s+", " ", text)
-        text = re.sub(r'\s*\.\s*', '. ', text).strip()
-        text = re.sub(pattern, '', text)
+        
+        # Normalize the "." for case "3.7" or "5.1"
+        text = re.sub(r'(?<!\d)\s*\.\s*(?!\d)', '. ', text)
+
+        # remove multiple dots
+        text = re.sub(r'\.(\s*\.)+', '. ', text)
+
+        # clean up leading/trailing spaces and dots
+        text = text.strip()
+        text = re.sub(r'\.\s*$', '.', text)
+
+        # remove space before punctuation like " ." or " ,"
+        text = re.sub(r'\s+([,.:;!?])', r'\1', text)
+        # remove space after opening brackets and before closing brackets
+        text = re.sub(r'\s+([)\]\}”’])', r'\1', text)
+        if os.environ.get("SOE_VINORM_DEBUG").lower() == "true":
+            print("DEBUG:", text)
+
         return text
 
     def normalize(self, text: str) -> str:
