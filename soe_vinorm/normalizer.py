@@ -109,6 +109,16 @@ class SoeNormalizer(Normalizer):
             **kwargs,
         )
 
+        self.UNIT_MAP = {
+            "mm²": "mili mét vuông",
+            "cm²": "xen ti mét vuông",
+            "dm²": "đề xi mét vuông",
+            "m²": "mét vuông",
+            "dam²": "đề ca mét vuông",
+            "hm²": "hec ta mét vuông",
+            "km²": "ki lô mét vuông",
+        }
+
     def preprocess(self, text: str) -> str:
         # remove citations and markdown formatting
         text = re.sub(r'\s*\[citation:\d+\]', '', text)
@@ -128,6 +138,9 @@ class SoeNormalizer(Normalizer):
         # Replace \n to "." for add [pause] time
         text = text.replace('\n', '. ')
 
+        # replace dashes between words with commas for short pauses
+        text = re.sub(r'(?<!\d)\s*[-–—]\s*(?!\d)', ', ', text)
+
         # normalize spaces around punctuation
         text = re.sub(r"\s+", " ", text)
         
@@ -145,6 +158,14 @@ class SoeNormalizer(Normalizer):
         text = re.sub(r'\s+([,.:;!?])', r'\1', text)
         # remove space after opening brackets and before closing brackets
         text = re.sub(r'\s+([)\]\}”’])', r'\1', text)
+
+        # handle measure units
+        for unit, expansion in self.UNIT_MAP.items():
+            pattern = rf'(\d+)\s*{re.escape(unit)}'
+            replacement = rf'\1 {expansion}'
+            text = re.sub(pattern, replacement, text) 
+
+
         if os.environ.get("SOE_VINORM_DEBUG", "false").lower() == "true":
             print("DEBUG:", text)
 
