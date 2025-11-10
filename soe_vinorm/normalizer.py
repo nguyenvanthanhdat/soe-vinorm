@@ -145,7 +145,7 @@ class SoeNormalizer(Normalizer):
         text = re.sub(r'\s+([,.:;!?])', r'\1', text)
         # remove space after opening brackets and before closing brackets
         text = re.sub(r'\s+([)\]\}”’])', r'\1', text)
-        if os.environ.get("SOE_VINORM_DEBUG").lower() == "true":
+        if os.environ.get("SOE_VINORM_DEBUG", "false").lower() == "true":
             print("DEBUG:", text)
 
         return text
