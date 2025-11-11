@@ -1,3 +1,4 @@
 Trump:Trăm
 AI:ây-ai
 &:và
+IF:i-ép

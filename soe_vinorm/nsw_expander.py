@@ -475,6 +475,39 @@ class RuleBasedNSWExpander(NSWExpander):
             self._vocab = config["vocab"]
             self._seq_len = config["seq_len"]
 
+        @staticmethod
+        def _normalize_tokens(text: str) -> List[str]:
+            return [
+                re.sub(r"^[^\wÀ-ỹ]+|[^\wÀ-ỹ]+$", "", tok)
+                for tok in text.lower().split()
+                if re.sub(r"^[^\wÀ-ỹ]+|[^\wÀ-ỹ]+$", "", tok)
+            ]
+
+        def _has_pair_nearby(self, abbr_norm: str, candidates: List[str],
+                            left_context: str, right_context: str) -> Union[str, None]:
+            # print(f"lc: {left_context}, rc: {right_context}, abbr: {abbr_norm}, candidates: {candidates}")
+            lc = self._get_left_context(left_context)
+            rc = self._get_right_context(right_context)
+            context = f"{lc} {rc}".strip()
+            for canon in candidates:
+                canon_tokens = self._normalize_tokens(canon)
+                right_tokens = self._normalize_tokens(rc)
+                left_tokens = self._normalize_tokens(lc)
+
+                canon_re = re.sub(r'\\\s+', r'\\s+', re.escape(canon))
+                abbr_loose = r'[.\-\s]*'.join(list(abbr_norm))
+                pat1 = re.compile(rf'(?iu)\b{canon_re}\s*\(\s*{abbr_loose}\s*\)')
+                pat2 = re.compile(rf'(?iu)\b{abbr_loose}\s*\(\s*{canon_re}\s*\)')
+                if pat1.search(context) or pat2.search(context):
+                    return canon
+
+                if right_tokens[: len(canon_tokens)] == canon_tokens:
+                    return canon
+                if left_tokens[-len(canon_tokens):] == canon_tokens:
+                    return canon
+
+            return None
+
         def expand_abbreviation(
             self,
             abbr: str,
@@ -484,6 +517,12 @@ class RuleBasedNSWExpander(NSWExpander):
         ) -> str:
             """Expand an abbreviation using context."""
             if abbr in self._abbr_dict:
+                cans = self._abbr_dict[abbr]
+                hit = self._has_pair_nearby(abbr, cans, left_context, right_context)
+                # print("hit: ", hit)
+                if hit:
+                    return ""
+
                 if len(self._abbr_dict[abbr]) == 1:
                     return self._abbr_dict[abbr][0]
                 else:
