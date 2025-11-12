@@ -136,7 +136,8 @@ class SoeNormalizer(Normalizer):
         text = re.sub(r'(?m)^\s*(\d{1,3})\.\s+', r'\1, ', text)
 
         # Replace \n to "." for add [pause] time
-        text = text.replace('\n', '. ')
+        # text = text.replace('\n', '. ')
+        text = re.sub(r'(?<![:;(\[])\n+', '. ', text)
 
         # replace dashes between words with commas for short pauses
         text = re.sub(r'(?<!\d)\s*[-–—]\s*(?!\d)', ', ', text)
