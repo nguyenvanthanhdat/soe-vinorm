@@ -165,6 +165,9 @@ class SoeNormalizer(Normalizer):
             replacement = rf'\1 {expansion}'
             text = re.sub(pattern, replacement, text) 
 
+        # replace "\"" to "," for short pause
+        text = text.replace(' " ', ', ').replace('" ', ', ').replace('“', ', ').replace('”', ', ')
+
 
         if os.environ.get("SOE_VINORM_DEBUG", "false").lower() == "true":
             print("DEBUG:", text)
