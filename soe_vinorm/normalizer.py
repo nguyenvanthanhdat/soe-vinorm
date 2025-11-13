@@ -119,6 +119,41 @@ class SoeNormalizer(Normalizer):
             "km²": "ki lô mét vuông",
         }
 
+        self.VALID_TLDS = [
+            "com", "org", "net", "edu", "gov", "mil", "int", "biz", "info", "name", "pro",
+            "coop", "museum", "travel", "jobs", "mobi", "tel", "asia", "cat", "xxx",
+            "aero", "arpa", "bg", "br", "ca", "cn", "de", "es", "eu", "fr", "in", "it",
+            "jp", "mx", "nl", "ru", "uk", "us", "io", "co"
+        ]
+
+        self.MULTIPART_TLDS = [
+            "com.vn", "gov.vn", "org.vn", "edu.vn", "net.vn", "biz.vn",
+            "co.uk", "ac.uk", "gov.uk",
+        ]
+
+    def _replace_tlds(self, text: str) -> str:
+        if getattr(self, "MULTIPART_TLDS", None):
+            mp_pat = "|".join(re.escape(t) for t in sorted(self.MULTIPART_TLDS, key=len, reverse=True))
+            pattern_mp = re.compile(
+                rf'(?i)\b(?P<label>(?=[a-z-]*[a-z])[a-z0-9-]{{1,63}})\.(?P<mp>{mp_pat})(?![a-z0-9-])'
+            )
+            text = pattern_mp.sub(
+                lambda m: f"{m.group('label')} chấm {m.group('mp').replace('.', ' chấm ')}",
+                text
+            )
+
+        if getattr(self, "VALID_TLDS", None):
+            sp_pat = "|".join(re.escape(t) for t in self.VALID_TLDS)
+            pattern_sp = re.compile(
+                rf'(?i)\b(?P<label>(?=[a-z-]*[a-z])[a-z0-9-]{{1,63}})\.(?P<tld>{sp_pat})(?![a-z0-9-])'
+            )
+            text = pattern_sp.sub(
+                lambda m: f"{m.group('label')} chấm {m.group('tld')}",
+                text
+            )
+
+        return text
+
     def preprocess(self, text: str) -> str:
         # remove citations and markdown formatting
         text = re.sub(r'\s*\[citation:\d+\]', '', text)
@@ -139,8 +174,12 @@ class SoeNormalizer(Normalizer):
         # text = text.replace('\n', '. ')
         text = re.sub(r'(?<![:;(\[])\n+', '. ', text)
 
+        # handle URL
+        text = self._replace_tlds(text)
+
         # replace dashes between words with commas for short pauses
-        text = re.sub(r'(?<!\d)\s*[-–—]\s*(?!\d)', ', ', text)
+        # text = re.sub(r'(?<!\d)\s*[-–—]\s*(?!\d)', ', ', text)
+        text = re.sub(r'(?<![A-Za-z0-9])\s*[-–—]\s*(?![A-Za-z0-9])', ', ', text)
 
         # normalize spaces around punctuation
         text = re.sub(r"\s+", " ", text)
