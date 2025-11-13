@@ -37,6 +37,15 @@ pip install git+https://github.com/nguyenvanthanhdat/soe-vinorm.git
 
 ## Usage
 
+### DEBUG Mode
+To enable DEBUG mode for more detailed logging, set the `SOE_VINORM_DEBUG` environment variable to `1`:
+
+```bash
+export SOE_VINORM_DEBUG=1
+# or
+export SOE_VINORM_DEBUG=true
+```
+
 ### Command Line Interface
 
 After installation, you can use the `soe-vinorm` command directly from the terminal:

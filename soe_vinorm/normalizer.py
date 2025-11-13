@@ -153,6 +153,34 @@ class SoeNormalizer(Normalizer):
             )
 
         return text
+    
+    def _clean_punctuation(self, text: str) -> str:
+        text = re.sub(r'\s+', ' ', text)
+
+        def replace_group(m):
+            group = m.group()
+            puncts = re.findall(r'[.,]', group)
+            return '.' if '.' in puncts else ','
+
+        text = re.sub(r'[.,](?:\s*[.,])+', replace_group, text)
+
+        return text.strip()
+
+    def _remove_emojis(self, text: str) -> str:
+        emoji_pattern = re.compile(
+            "[" 
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map symbols
+            "\U0001F1E0-\U0001F1FF"  # flags
+            "\U0001F900-\U0001F9FF"  # supplemental symbols and pictographs
+            "\U0001FA70-\U0001FAFF"  # symbols and pictographs extended-A
+            "\U00002702-\U000027B0"  # dingbats
+            "\U000024C2-\U0001F251"  # enclosed characters
+            "]+",
+            flags=re.UNICODE,
+        )
+        return emoji_pattern.sub("", text)
 
     def preprocess(self, text: str) -> str:
         # remove citations and markdown formatting
@@ -206,11 +234,16 @@ class SoeNormalizer(Normalizer):
             text = re.sub(pattern, replacement, text) 
 
         # replace "\"" to "," for short pause
-        text = text.replace(' " ', ', ').replace('" ', ', ').replace('“', ', ').replace('”', ', ')
+        text = text.replace(' " ', ', ').replace('" ', ', ').replace('"', ', ').replace('“', ', ').replace('”', ', ')
+
+        # final cleanup
+        text = self._remove_emojis(text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        text = self._clean_punctuation(text)
 
 
-        if os.environ.get("SOE_VINORM_DEBUG", "false").lower() == "true":
-            print("DEBUG:", text)
+        if os.environ.get("SOE_VINORM_DEBUG", "false").lower() == "true" or os.environ.get("SOE_VINORM_DEBUG") == "1":
+            print("DEBUG preprocess:", text)
 
         return text
 
